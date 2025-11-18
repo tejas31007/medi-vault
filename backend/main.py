@@ -58,6 +58,8 @@ async def upload_file(file: UploadFile = File(...)):
     file_location = f"{UPLOAD_DIR}/{file.filename}"
     with open(file_location, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
+    await manager.broadcast({"status": "file_uploaded", "message": "New Secure File Available"})
+    
     return {"info": f"File saved at {file_location}"}
 
 @app.get("/files")
@@ -79,6 +81,7 @@ def download_file(filename: str):
         return FileResponse(file_path)
     return {"error": "File not found"}
 
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
@@ -88,33 +91,33 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data_text = await websocket.receive_text()
             data = json.loads(data_text)
-            print(f"📩 Received command: {data}")
 
             if data.get("action") == "START_KEY_GEN":
                 is_hacker_active = data.get("hacker", False)
                 
-                # 1. Tell EVERYONE we are starting
                 msg = "⚠️ INTERCEPTING PHOTONS..." if is_hacker_active else "Aligning Polarizers..."
                 await manager.broadcast({"status": "initializing", "message": msg})
                 
                 await asyncio.sleep(1) 
 
-                # 2. Run Simulation
                 result = generate_bb84_key(num_bits=100, intercept=is_hacker_active)
-                key = result["key"]
-                qber = result["error_rate"]
                 
-                # 3. Broadcast the Result to EVERYONE
                 await manager.broadcast({
                     "status": "complete", 
-                    "key": key,
-                    "qber": qber,
-                    "message": f"Key Generated. QBER: {qber}%"
+                    "key": result["key"],
+                    "qber": result["error_rate"],
+                    "message": f"Key Generated. QBER: {result['error_rate']}%"
                 })
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         print("Client disconnected")
+        # --- NEW: THE KILL SWITCH ---
+        # If anyone disconnects, tell everyone to wipe their keys
+        await manager.broadcast({
+            "status": "session_terminated", 
+            "message": "Peer Disconnected. Secure Channel Destroyed."
+        })
     except Exception as e:
         print(f"❌ WebSocket Error: {e}")
         manager.disconnect(websocket)

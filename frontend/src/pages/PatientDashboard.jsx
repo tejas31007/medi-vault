@@ -1,48 +1,74 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import QuantumGraph from '../components/QuantumGraph';
-import { Shield, Download, FileText, Lock, Activity, CheckCircle, Key, LogOut, Server, AlertTriangle } from 'lucide-react';
+import { Shield, FileText, Lock, Activity, Key, LogOut, Server, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const PatientDashboard = () => {
   const [files, setFiles] = useState([]);
-  const [quantumKey, setQuantumKey] = useState("WAITING FOR PHOTONS...");
-  const [qber, setQber] = useState(0);
+  
+  const [quantumKey, setQuantumKey] = useState(() => sessionStorage.getItem("quantumKey") || "WAITING FOR PHOTONS...");
+  const [qber, setQber] = useState(() => Number(sessionStorage.getItem("qber")) || 0);
+  
   const [wsStatus, setWsStatus] = useState("Connecting to Quantum Channel...");
   const [downloading, setDownloading] = useState(null);
   const [socket, setSocket] = useState(null);
-
-  useEffect(() => {
+  const fetchFiles = () => {
     fetch("http://127.0.0.1:8000/files")
       .then(res => res.json())
       .then(data => setFiles(data))
       .catch(err => console.error(err));
+  };
+
+  useEffect(() => {
+    fetchFiles();
 
     const ws = new WebSocket("ws://127.0.0.1:8000/ws");
     ws.onopen = () => setWsStatus("Channel Active - Listening");
     
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      
       if (data.status === "initializing") {
         setWsStatus("Detecting Incoming Photons...");
-      } else if (data.status === "complete") {
+      } 
+      else if (data.status === "complete") {
         setWsStatus("Photons Measured. Key Reconstructed.");
         setQuantumKey(data.key);
         setQber(data.qber);
+        sessionStorage.setItem("quantumKey", data.key);
+        sessionStorage.setItem("qber", data.qber);
+      }
+      else if (data.status === "file_uploaded") {
+        console.log("New file detected, refreshing list...");
+        fetchFiles();
+      }
+      else if (data.status === "session_terminated") {
+        alert("⚠️ SECURITY ALERT: The Doctor has disconnected.\n\nThe Secure Channel has collapsed. destroying key...");
+        
+        setQuantumKey("WAITING FOR PHOTONS...");
+        setQber(0);
+        sessionStorage.removeItem("quantumKey");
+        sessionStorage.removeItem("qber");
+        setWsStatus("Channel Broken - Waiting for Reconnection...");
       }
     };
     setSocket(ws);
     return () => ws.close();
   }, []);
 
+  const handleLogout = () => {
+    sessionStorage.clear();
+  };
+
   const handleDownload = (filename) => {
     if (quantumKey === "WAITING FOR PHOTONS...") {
-      alert("⛔ ACCESS DENIED. \n\nYou do not have the Quantum Key to decrypt this file.\nAsk the Doctor to initiate the Quantum Handshake.");
+      alert("⛔ ACCESS DENIED. \n\nYou do not have the Quantum Key to decrypt this file.");
       return;
     }
 
     if (qber > 10) {
-        alert(`⛔ SECURITY WARNING!\n\nDecryption Blocked.\n\nThe Quantum Key is corrupted (QBER: ${qber}%). This indicates an eavesdropper (Eve) intercepted the transmission.\n\nRequest a new key from the Doctor.`);
+        alert(`⛔ SECURITY WARNING!\n\nDecryption Blocked.\n\nThe Quantum Key is corrupted (QBER: ${qber}%). Request a new key.`);
         return;
     }
 
@@ -59,6 +85,7 @@ const PatientDashboard = () => {
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-700 ${isSecure ? "bg-slate-900 text-white" : "bg-slate-900 text-red-50"}`}>
+      
       <nav className={`px-8 py-4 flex justify-between items-center border-b backdrop-blur-md sticky top-0 z-50 ${isSecure ? "border-emerald-900/30 bg-slate-800/50" : "border-red-900/50 bg-red-950/30"}`}>
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${isSecure ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-500"}`}>
@@ -66,13 +93,14 @@ const PatientDashboard = () => {
           </div>
           <h1 className="font-bold text-xl tracking-tight">Medi-Vault <span className="font-normal opacity-50">| Patient Portal</span></h1>
         </div>
-        <Link to="/" className="flex items-center gap-2 text-sm font-medium opacity-60 hover:opacity-100 transition">
+        <Link to="/" onClick={handleLogout} className="flex items-center gap-2 text-sm font-medium opacity-60 hover:opacity-100 transition">
           <LogOut className="w-4 h-4" /> Logout
         </Link>
       </nav>
 
       <main className="p-8 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
+        {/* LEFT COLUMN */}
         <div className="lg:col-span-1 space-y-6">
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
@@ -84,7 +112,6 @@ const PatientDashboard = () => {
               Receiver Node (Bob)
             </h2>
             
-            {/* Graph showing "Reception" */}
             <div className="h-32 mb-4 bg-black rounded-lg border border-slate-700 overflow-hidden relative">
                <QuantumGraph isHackerActive={!isSecure && qber > 0} /> 
                <div className={`absolute bottom-2 right-2 text-[10px] font-mono ${isSecure ? "text-emerald-500" : "text-red-500 animate-pulse"}`}>
@@ -93,7 +120,6 @@ const PatientDashboard = () => {
             </div>
 
             <div className="space-y-4">
-              {/* Key Display */}
               <div>
                 <div className="text-xs font-bold uppercase opacity-50 mb-1">Decryption Key Status</div>
                 <div className={`font-mono text-xs p-3 rounded border break-all transition-all 
@@ -103,13 +129,11 @@ const PatientDashboard = () => {
                 </div>
               </div>
 
-              {/* QBER Display */}
               <div className={`p-3 rounded border ${isSecure ? "border-emerald-500/20 bg-emerald-500/10" : "border-red-500/30 bg-red-500/10"}`}>
                  <div className="flex justify-between items-center">
                     <span className="text-xs font-bold uppercase opacity-70">Bit Error Rate (QBER)</span>
                     <span className={`font-mono font-bold ${isSecure ? "text-emerald-400" : "text-red-500"}`}>{qber}%</span>
                  </div>
-                 {!isSecure && <div className="text-[10px] text-red-400 mt-1 font-bold">⚠️ CRITICAL: KEY COMPROMISED</div>}
               </div>
             </div>
 
@@ -119,7 +143,7 @@ const PatientDashboard = () => {
           </motion.div>
         </div>
 
-        {/* RIGHT COLUMN: INBOX */}
+        {/* RIGHT COLUMN (INBOX) */}
         <div className="lg:col-span-2">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
