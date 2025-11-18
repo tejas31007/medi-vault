@@ -1,0 +1,12 @@
+# Ignore Python virtual environment
+backend/venv/
+__pycache__/
+*.pyc
+
+# Ignore Node modules (The heavy stuff)
+frontend/node_modules/
+frontend/dist/
+
+# Ignore Environment variables (Secrets)
+.env
+.DS_Store
