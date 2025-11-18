@@ -1,18 +1,16 @@
-from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect # type: ignore
-from fastapi.middleware.cors import CORSMiddleware # type: ignore
-from fastapi.responses import FileResponse # type: ignore
+from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 import shutil
 import os
 import asyncio
 import json
 from typing import List
 
-# IMPORT YOUR QUANTUM BRAIN
 from quantum_engine import generate_bb84_key
 
 app = FastAPI()
 
-# --- CORS ---
 origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
 app.add_middleware(
@@ -23,12 +21,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- UPLOAD FOLDER ---
 UPLOAD_DIR = "secure_uploads"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
-# --- CONNECTION MANAGER (The Broadcaster) ---
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -41,7 +37,6 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
     async def broadcast(self, message: dict):
-        # Send the message to EVERY connected user (Doctor & Patient)
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
@@ -50,8 +45,6 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-
-# --- HTTP ROUTES ---
 @app.get("/")
 def read_root():
     return {"message": "Medi-Vault Backend is Running!"}
@@ -86,7 +79,6 @@ def download_file(filename: str):
         return FileResponse(file_path)
     return {"error": "File not found"}
 
-# --- WEBSOCKET ROUTE (UPDATED FOR BROADCASTING) ---
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)

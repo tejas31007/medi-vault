@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable no-unused-vars */
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import QuantumGraph from '../components/QuantumGraph';
@@ -9,19 +7,17 @@ import { motion } from 'framer-motion';
 const PatientDashboard = () => {
   const [files, setFiles] = useState([]);
   const [quantumKey, setQuantumKey] = useState("WAITING FOR PHOTONS...");
-  const [qber, setQber] = useState(0); // NEW: Track Error Rate
+  const [qber, setQber] = useState(0);
   const [wsStatus, setWsStatus] = useState("Connecting to Quantum Channel...");
   const [downloading, setDownloading] = useState(null);
   const [socket, setSocket] = useState(null);
 
-  // 1. Fetch Available Files
   useEffect(() => {
     fetch("http://127.0.0.1:8000/files")
       .then(res => res.json())
       .then(data => setFiles(data))
       .catch(err => console.error(err));
 
-    // 2. Connect to Quantum Channel
     const ws = new WebSocket("ws://127.0.0.1:8000/ws");
     ws.onopen = () => setWsStatus("Channel Active - Listening");
     
@@ -32,26 +28,23 @@ const PatientDashboard = () => {
       } else if (data.status === "complete") {
         setWsStatus("Photons Measured. Key Reconstructed.");
         setQuantumKey(data.key);
-        setQber(data.qber); // NEW: Save the error rate
+        setQber(data.qber);
       }
     };
     setSocket(ws);
     return () => ws.close();
   }, []);
 
-  // 3. Mock "Decrypt & Download" Flow
   const handleDownload = (filename) => {
     if (quantumKey === "WAITING FOR PHOTONS...") {
       alert("⛔ ACCESS DENIED. \n\nYou do not have the Quantum Key to decrypt this file.\nAsk the Doctor to initiate the Quantum Handshake.");
       return;
     }
 
-    // --- NEW SECURITY CHECK ---
     if (qber > 10) {
         alert(`⛔ SECURITY WARNING!\n\nDecryption Blocked.\n\nThe Quantum Key is corrupted (QBER: ${qber}%). This indicates an eavesdropper (Eve) intercepted the transmission.\n\nRequest a new key from the Doctor.`);
         return;
     }
-    // --------------------------
 
     setDownloading(filename);
     
@@ -66,8 +59,6 @@ const PatientDashboard = () => {
 
   return (
     <div className={`min-h-screen font-sans transition-colors duration-700 ${isSecure ? "bg-slate-900 text-white" : "bg-slate-900 text-red-50"}`}>
-      
-      {/* NAVBAR */}
       <nav className={`px-8 py-4 flex justify-between items-center border-b backdrop-blur-md sticky top-0 z-50 ${isSecure ? "border-emerald-900/30 bg-slate-800/50" : "border-red-900/50 bg-red-950/30"}`}>
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${isSecure ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-500"}`}>
@@ -82,7 +73,6 @@ const PatientDashboard = () => {
 
       <main className="p-8 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* LEFT COLUMN: QUANTUM RECEIVER */}
         <div className="lg:col-span-1 space-y-6">
           <motion.div 
             initial={{ opacity: 0, x: -20 }}

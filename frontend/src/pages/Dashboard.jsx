@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable no-unused-vars */
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import QuantumGraph from '../components/QuantumGraph';
@@ -16,7 +14,6 @@ const Dashboard = () => {
   
   const fileInputRef = useRef(null);
 
-  // --- LOGIC REMAINS THE SAME ---
   useEffect(() => {
     fetch("http://127.0.0.1:8000/check")
       .then(res => res.json())
@@ -77,8 +74,6 @@ const Dashboard = () => {
 
   return (
     <div className={`min-h-screen transition-colors duration-700 ${isSecure ? "bg-slate-50 text-slate-800" : "bg-slate-900 text-white"}`}>
-      
-      {/* TOP NAVIGATION */}
       <nav className={`px-8 py-4 flex justify-between items-center border-b ${isSecure ? "bg-white border-slate-200" : "bg-slate-800/50 border-red-900/30"}`}>
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${isSecure ? "bg-blue-100 text-blue-600" : "bg-red-500/20 text-red-500"}`}>
@@ -90,7 +85,6 @@ const Dashboard = () => {
         </div>
 
         <div className="flex items-center gap-6">
-           {/* Hacker Switch */}
            <div className={`flex items-center gap-3 px-4 py-2 rounded-full border ${isSecure ? "bg-slate-100 border-slate-200" : "bg-red-900/20 border-red-500/30"}`}>
               <span className="text-xs font-bold uppercase tracking-wider opacity-70">Simulation Mode</span>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -105,13 +99,10 @@ const Dashboard = () => {
         </div>
       </nav>
 
-      {/* MAIN CONTENT */}
       <main className="p-8 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* LEFT COLUMN (Controls) */}
         <div className="lg:col-span-7 space-y-6">
           
-          {/* 1. QUANTUM CHANNEL CARD */}
           <motion.div 
              initial={{ opacity: 0, y: 20 }}
              animate={{ opacity: 1, y: 0 }}
@@ -132,7 +123,6 @@ const Dashboard = () => {
                 <div className={`font-mono text-xs p-4 rounded-lg break-all border transition-all ${isSecure ? "bg-slate-900 text-emerald-400 border-slate-800" : "bg-red-950/30 text-red-400 border-red-500/30"}`}>
                    {quantumKey === "NOT GENERATED" ? <span className="opacity-30">Waiting for photon transmission...</span> : quantumKey}
                 </div>
-                {/* Status Text */}
                 <div className="absolute right-3 top-9">
                    {wsStatus === "Sending Photons..." && <Activity className="w-4 h-4 text-blue-400 animate-spin" />}
                 </div>
@@ -148,7 +138,6 @@ const Dashboard = () => {
             </div>
           </motion.div>
 
-          {/* 2. UPLOAD CARD */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -179,7 +168,6 @@ const Dashboard = () => {
           </motion.div>
         </div>
 
-        {/* RIGHT COLUMN (Telemetry) */}
         <div className="lg:col-span-5 space-y-6">
            <motion.div 
              initial={{ opacity: 0, x: 20 }}
@@ -191,12 +179,10 @@ const Dashboard = () => {
                 <Activity className="w-5 h-5 opacity-50" /> Live Telemetry
               </h2>
 
-              {/* GRAPH CONTAINER */}
               <div className="mb-6 bg-black rounded-xl overflow-hidden shadow-inner border border-slate-700">
                  <QuantumGraph isHackerActive={hackerMode} />
               </div>
 
-              {/* METRICS */}
               <div className="space-y-4">
                  <div className={`p-4 rounded-xl border ${isSecure ? "bg-slate-50 border-slate-200" : "bg-red-950/10 border-red-900/30"}`}>
                     <div className="flex justify-between items-end mb-2">
