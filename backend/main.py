@@ -54,13 +54,19 @@ def check_health():
     return {"status": "Quantum Server is Online", "qubits": 50}
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    file_location = f"{UPLOAD_DIR}/{file.filename}"
-    with open(file_location, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    await manager.broadcast({"status": "file_uploaded", "message": "New Secure File Available"})
+async def upload_file(files: List[UploadFile] = File(...)):
+    saved_files = []
     
-    return {"info": f"File saved at {file_location}"}
+    for file in files:
+        file_location = f"{UPLOAD_DIR}/{file.filename}"
+        with open(file_location, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        saved_files.append(file.filename)
+    
+    # Tell Patient to refresh
+    await manager.broadcast({"status": "file_uploaded", "message": f"{len(saved_files)} Secure Files Available"})
+    
+    return {"info": f"Successfully saved {len(saved_files)} files."}
 
 @app.get("/files")
 def list_files():

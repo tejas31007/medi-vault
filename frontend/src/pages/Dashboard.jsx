@@ -45,29 +45,55 @@ const Dashboard = () => {
   };
 
   const handleFileChange = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+    const files = event.target.files; // Note: "files" (plural)
+    if (!files || files.length === 0) return;
 
+    // 1. SECURITY CHECKS
     if (qber > 10) {
-      alert("⛔ CRITICAL SECURITY ALERT! \n\nEavesdropper detected.");
+      alert("⛔ CRITICAL SECURITY ALERT! \n\nEavesdropper detected (High QBER). \nUpload blocked by Physics.");
       event.target.value = null; 
       return;
     }
+    
     if (quantumKey === "NOT GENERATED") {
       alert("⚠️ Please generate a Quantum Key first.");
       return;
     }
-    
+
+    alert(`✅ Channel Secure. Encrypting & Uploading ${files.length} files...`);
+
     const formData = new FormData();
-    formData.append("file", file);
+    // Loop through all selected files and add them
+    for (let i = 0; i < files.length; i++) {
+        formData.append("files", files[i]); 
+    }
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/upload", { method: "POST", body: formData });
-      if (response.ok) alert(`Success! File Encrypted & Uploaded.`);
-      else alert("❌ Server rejected upload.");
+      const response = await fetch("http://127.0.0.1:8000/upload", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (response.ok) {
+        alert(`Success! ${files.length} files transferred securely.`);
+        
+        // --- THE FIX: BURN THE KEY ---
+        setQuantumKey("NOT GENERATED"); 
+        setQber(0); 
+        // -----------------------------
+        
+        alert("🔒 PROTOCOL: Key has been destroyed for Forward Secrecy.\nGenerate a new key for the next batch.");
+      } else {
+        alert("❌ Server rejected the upload.");
+      }
+
     } catch (error) {
+      console.error("Upload Error:", error);
       alert("❌ Network Error.");
     }
+    
+    // Reset the input so you can select the same files again if needed
+    event.target.value = null;
   };
 
   const isSecure = qber < 5; 
@@ -148,7 +174,7 @@ const Dashboard = () => {
                 <FileText className="w-5 h-5 opacity-50" /> Medical Record Upload
              </h2>
 
-             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple />
              
              <div 
                onClick={() => isSecure && fileInputRef.current.click()}
